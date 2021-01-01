@@ -1,60 +1,37 @@
 package movie;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 
-public class Movie {
+public abstract class Movie {
     private String title;
     private Duration runningTime;
     private Money fee;
     private List<DiscountCondition> discountConditions;
 
-    private MovieType movieType;
-    private Money discountAmount;
-    private double discountPercent;
-
-
-    public MovieType getMovieType() {
-        return movieType;
+    public Movie(String title, Duration runningTime, Money fee, DiscountCondition ...discountConditions) {
+        this.title = title;
+        this.runningTime = runningTime;
+        this.fee = fee;
+        this.discountConditions = Arrays.asList(discountConditions);
     }
 
-    public Money calculateAmountDiscountedFee(){
-        if(movieType != MovieType.AMOUNT_DISCOUNT){
-            throw new IllegalArgumentException();
+    public Money calculateMovieFee(Screening screening){
+        if(isDiscountable(screening)){
+            return fee.minus(calculateDiscountAmount());
+
         }
-
-        return fee.minus(discountAmount);
-    }
-
-    public Money calculatePercentDiscountedFee(){
-        if(movieType != MovieType.PERCENT_DISCOUNT){
-            throw new IllegalArgumentException();
-        }
-
-        return fee.minus(fee.times(discountPercent));
-    }
-
-
-    public Money calculateNoneDiscountedFee(){
-        if(movieType != MovieType.NONE_DISCOUNT){
-            throw new IllegalArgumentException();
-        }
-
         return fee;
     }
 
-    public boolean isDiscountable(LocalDateTime whenScreened, int sequence){
-        for(DiscountCondition condition :  discountConditions){
-            if(condition.getType() == DiscountConditionType.PERIOD){
-                if(condition.isDiscountable(whenScreened.getDayOfWeek(), whenScreened.toLocalTime())){
-                    return true;
-                }
-            } else {
-                if(condition.isDiscountable(sequence))
-                    return true;
-            }
-        }
-        return false;
+    public boolean isDiscountable(Screening screening){
+        return discountConditions.stream().allMatch(discountCondition -> discountCondition.isSatisfiedBy(screening));
+    }
+
+    abstract protected Money calculateDiscountAmount();
+
+    protected Money getFee() {
+        return fee;
     }
 }
